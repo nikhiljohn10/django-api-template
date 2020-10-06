@@ -12,6 +12,7 @@ git clone https://github.com/nikhiljohn10/django-api-template.git
 cd django-api-template
 python3 -m venv venv
 . venv/bin/activate
-pip install -Ur requirements.txt
+cd app
+./scripts/init.sh
 ./scripts/develop.sh
 ```
