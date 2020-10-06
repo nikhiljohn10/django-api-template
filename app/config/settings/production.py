@@ -1,89 +1,69 @@
-from .base import *
 import sentry_sdk
+import dj_database_url as db
 from sentry_sdk.integrations.django import DjangoIntegration
 
-sentry_sdk.init(
-    dsn=env("SENTRY_DSN"),
-    integrations=[DjangoIntegration()],
-    traces_sample_rate=1.0,
-    send_default_pii=True,
-    environment="prod"
-)
+from .base import *
 
+"""
+DEBUG must be False for production settings
+"""
 DEBUG = False
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'postgres',
-#         'USER': 'postgres',
-#         'PASSWORD': '',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+"""
+Enable Sentry Event monitoring for Django
+Set the SENTRY_DSN variable inside .env
+"""
+if env.bool('DJANGO_PRODUCTION_SENTRY'):
+    sentry_sdk.init(
+        dsn=env("SENTRY_DSN"),
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=1.0,
+        send_default_pii=True,
+        environment="prod"
+    )
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR.parent/'db.sqlite3',
+"""
+Load database from environment variable DATABASE_URL
+"""
+if env.bool('DJANGO_PRODUCTION_POSTGRES'):
+    DATABASES = {
+        'default': db.config(
+            conn_max_age=env.int('POSTGRES_CONN_MAX_AGE', 500)
+        )
     }
-}
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'django.server': {
-            '()': 'django.utils.log.ServerFormatter',
-            'format': '[%(server_time)s] %(message)s',
+"""
+Enable Logging if
+"""
+if env.bool('DJANGO_LOGGING'):
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'filename': env.path('DJANGO_LOGGING_FILE'),
+            },
         },
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
-        },
-        'simple': {
-            'format': '%(levelname)s %(message)s'
-        },
-    },
-    'filters': {
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
-    },
-    'handlers': {
-        'django.server': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'django.server',
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple'
-        },
-        'mail_admins': {
-            'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'propagate': True,
-        },
-        'django.server': {
-            'handlers': ['django.server'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.request': {
-            'handlers': ['mail_admins', 'console'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'INFO'
+        'loggers': {
+            'django': {
+                'handlers': ['file'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
         },
     }
-}
+
+"""
+Secutiry Settings
+"""
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 86400
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
