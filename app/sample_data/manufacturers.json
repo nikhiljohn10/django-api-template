@@ -1,0 +1,29 @@
+[
+  {
+    "model": "api.manufacturer",
+    "pk": 1,
+    "fields": {
+      "name": "Porsche",
+      "about": "Porsche car prices start(GST Included) at Rs 1.20 Cr for the most inexpensive model in its lineup, the Macan. The most expensive car in Porsche's lineup is the 911, priced at Rs. 3.07 Cr for its top variant. In total, Porsche has 6 models on sale in India. The Porsche Cayenne, Porsche 911, Porsche Macan are amongst the most popular cars in their respective segments.",
+      "location": "Germany"
+    }
+  },
+  {
+    "model": "api.manufacturer",
+    "pk": 2,
+    "fields": {
+      "name": "Mercedes-Benz",
+      "about": "Mercedes-Benz car prices start(GST Included) at Rs 1.38 Cr for the most inexpensive model in its lineup, the C-Class. The most expensive car in Mercedes-Benz's lineup is the AMG GT 4-Door Coupe, priced at Rs. 2.42 Cr for its top variant. In total, Mercedes-Benz has 15 models on sale in India. The Mercedes-Benz C-Class, Mercedes-Benz GLS, Mercedes-Benz E-Class are amongst the most popular cars in their respective segments.",
+      "location": "Germany"
+    }
+  },
+  {
+    "model": "api.manufacturer",
+    "pk": 3,
+    "fields": {
+      "name": "Audi",
+      "about": "Audi car prices start(GST Included) at Rs 1.56 Cr for the most inexpensive model in its lineup, the A6. The most expensive car in Audi's lineup is the RS Q8, priced at Rs. 2.07 Cr for its top variant. In total, Audi has 5 models on sale in India. The Audi A6, Audi Q8, Audi A8 are amongst the most popular cars in their respective segments.",
+      "location": "Germany"
+    }
+  }
+]

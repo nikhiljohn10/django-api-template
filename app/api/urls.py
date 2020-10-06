@@ -1,14 +1,15 @@
 from django.urls import path, include
-from django.contrib.auth.models import User
 from rest_framework import routers
-from api.views import UserViewSet, MySampleView
+
+from api import views
 
 router = routers.DefaultRouter()
-router.register(r'users', UserViewSet)
+router.register(r'manufacturers', views.ManufacturerViewSet)
+router.register(r'cars', views.CarViewSet)
+router.register(r'ownerships', views.OwnershipViewSet)
+router.register(r'owners', views.OwnerViewSet)
 
 urlpatterns = [
 	path('', include(router.urls)),
     path('auth/', include('rest_framework.urls')),
-    path('sam/', MySampleView.as_view()),
-
 ]

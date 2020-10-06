@@ -1,0 +1,110 @@
+[
+  {
+    "model": "api.car",
+    "pk": 1,
+    "fields": {
+      "name": "911",
+      "price": "16300000.00",
+      "description": "The Porsche 911 has 1 Petrol Engine on offer. The Petrol engine is 2981 cc. It is available with the Automatic transmission. The 911 is a 4 seater Coupe and has a length of 4519mm, width of 1852mm and a wheelbase of 2450mm.",
+      "release_date": "2020-10-07",
+      "body_type": "coupe",
+      "manufacturer": 1
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 2,
+    "fields": {
+      "name": "718",
+      "price": "8546000.00",
+      "description": "Porsche made some radical changes to their entry-level mid-engined roadster and sports coupe with the new 718 series. Available as the 718 Boxster and 718 Cayman, the two are priced at Rs 89.95 lakh and Rs 85.95 lakh, respectively. Gone are the flat-six engines, replaced by modern 4-cylinder turbocharged 2.0-litre petrol units. While the new engine offers impressive performance with 300PS of max power and 380Nm of peak torque, the lack of a sporty soundtrack from the turbo-charged four-pot was an issue raised by many. However, there were no complaints about how these new cars drove, with both Boxster and Cayman capable of a 0-100kmph time of 4.9 seconds and a top speed of 275kph, thanks to the 7-speed PDK gearbox that sends the power to the rear wheels. While other markets get the roadster and the coupe in a more powerful ‘S’ variant, they are yet to be launched in India.",
+      "release_date": "2020-10-07",
+      "body_type": "coupe",
+      "manufacturer": 1
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 3,
+    "fields": {
+      "name": "Panamera",
+      "price": "14800000.00",
+      "description": "The Porsche Panamera has 3 Petrol Engine on offer. The Petrol engine is 3996 cc and 2999 cc and 4806 cc. It is available with the Automatic transmission. Depending upon the variant and fuel type the Panamera has a mileage of 10.75 kmpl. The Panamera is a 5 seater Sedan and has a length of 5199 mm, width of 1937 mm and a wheelbase of 3100mm.",
+      "release_date": "2020-10-07",
+      "body_type": "sedan",
+      "manufacturer": 1
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 4,
+    "fields": {
+      "name": "AMG GT",
+      "price": "22700000.00",
+      "description": "Mercedes-Benz has launched two variants of the GT in India. These are the Mercedes-AMG GT R and the GT Roadster.  While the former is priced at Rs 2.23 crore, the latter will cost you Rs 2.19 crore (both prices, ex-showroom).The addition of these models take the count of AMG-powered models on sale in India to twelve.",
+      "release_date": "2020-10-07",
+      "body_type": "coupe",
+      "manufacturer": 2
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 5,
+    "fields": {
+      "name": "CLS",
+      "price": "22700000.00",
+      "description": "The CLS is available in a single CLS 300 d variant only, priced at Rs 84.7 (ex-showroom pan-India). It is powered by a 2.0-litre diesel engine that makes 245PS/500Nm with a 9-speed automatic transmission. Mercedes-Benz claims that the CLS can go from 0-100kmph in 6.4 seconds before hitting a top speed of 250kmph. Features on offer include 7 airbags, brake assist system, multi-beam LED headlamps, air suspension, touch-sensitive buttons on the steering wheel, a Burmester sound system and 64-colour ambient lighting system. Currently, the new CLS doesn't have any rivals in the Indian market since Audi discontinued the A7 in India a few years back.",
+      "release_date": "2020-10-07",
+      "body_type": "coupe",
+      "manufacturer": 2
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 6,
+    "fields": {
+      "name": "GLS",
+      "price": "9990000.00",
+      "description": "The Mercedes-Benz GLS has 1 Diesel Engine and 1 Petrol Engine on offer. The Diesel engine is 2925 cc while the Petrol engine is 2999 cc. It is available with the Automatic transmission. The GLS is a 7 seater SUV and has a length of 5207, width of 2157 and a wheelbase of 3135.",
+      "release_date": "2020-10-07",
+      "body_type": "suv",
+      "manufacturer": 2
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 7,
+    "fields": {
+      "name": "RS7",
+      "price": "19400000.00",
+      "description": "The Audi RS7 has 1 Petrol Engine on offer. The Petrol engine is 3996 cc. It is available with the Automatic transmission. Depending upon the variant and fuel type the RS7 has a mileage of 8.9 kmpl. The RS7 is a 4 seater Luxury and has a length of 5009, width of 1950 and a wheelbase of 2934.",
+      "release_date": "2020-10-07",
+      "body_type": "coupe",
+      "manufacturer": 3
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 8,
+    "fields": {
+      "name": "Q8",
+      "price": "13300000.00",
+      "description": "The Audi Q8 has 1 Petrol Engine on offer. The Petrol engine is 2995 cc. It is available with the Automatic transmission. Depending upon the variant and fuel type the Q8 has a mileage of 9.8 kmpl. The Q8 is a 5 seater SUV and has a length of 4986mm, width of 1995mm and a wheelbase of 2995mm.",
+      "release_date": "2020-10-07",
+      "body_type": "suv",
+      "manufacturer": 3
+    }
+  },
+  {
+    "model": "api.car",
+    "pk": 9,
+    "fields": {
+      "name": "A6",
+      "price": "5442000.00",
+      "description": "The Audi A6 has 1 Petrol Engine on offer. The Petrol engine is 1984 cc. It is available with the Automatic transmission. Depending upon the variant and fuel type the A6 has a mileage of 17.01 kmpl. The A6 is a 5 seater Sedan and has a length of 4933mm, width of 1874mm and a wheelbase of 2912mm.",
+      "release_date": "2020-10-07",
+      "body_type": "sedan",
+      "manufacturer": 3
+    }
+  }
+]

@@ -1,9 +1,17 @@
-import os
+import environ
 from pathlib import Path
+from django.core.management.utils import get_random_secret_key
 
+env = environ.Env()
 BASE_DIR = Path(__file__).resolve().parent.parent
+environ.Env.read_env(env_file=str(BASE_DIR.parent/'.env'))
+SECRET_KEY = get_random_secret_key()
+ALLOWED_HOSTS = [env('DJANGO_API_DOAMIN', default='*')]
+
 WSGI_APPLICATION = 'config.wsgi.application'
 ROOT_URLCONF = 'config.urls'
+AUTH_USER_MODEL = 'api.Owner'
+API_ROOT_URL = 'api/v1/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -62,12 +70,12 @@ STATIC_ROOT = BASE_DIR/'static'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR/'media'
 
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = API_ROOT_URL
+LOGOUT_REDIRECT_URL = API_ROOT_URL
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': int(os.getenv('DJANGO_PAGINATION_LIMIT', 10)),
+    'PAGE_SIZE': int(env('DJANGO_PAGINATION_LIMIT', default=10)),
     'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',

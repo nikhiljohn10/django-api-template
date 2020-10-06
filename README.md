@@ -14,5 +14,14 @@ python3 -m venv venv
 . venv/bin/activate
 cd app
 ./scripts/init.sh
-./scripts/develop.sh
 ```
+
+##### Init script
+
+ - Remove sqlite3 db
+ - Remove old migrations
+ - Remove cached files
+ - Install dependencies
+ - Generate new migration files
+ - Load sample data
+ - Start development server

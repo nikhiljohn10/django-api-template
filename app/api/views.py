@@ -1,17 +1,20 @@
 from rest_framework import viewsets
-from django.contrib.auth.models import User
-from api.serializers import UserSerializer
 
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
+from api.serializers import ManufacturerSerializer, CarSerializer, OwnershipSerializer, OwnerSerializer
+from api.models import Manufacturer, Car, Ownership, Owner
 
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+class ManufacturerViewSet(viewsets.ModelViewSet):
+    queryset = Manufacturer.objects.all()
+    serializer_class = ManufacturerSerializer
 
-class MySampleView(APIView):
-    permission_classes = (IsAuthenticated,)
+class CarViewSet(viewsets.ModelViewSet):
+    queryset = Car.objects.all()
+    serializer_class = CarSerializer
 
-    def get(self, request):
-        return Response(data={"status": True})
+class OwnershipViewSet(viewsets.ModelViewSet):
+    queryset = Ownership.objects.all()
+    serializer_class = OwnershipSerializer
+
+class OwnerViewSet(viewsets.ModelViewSet):
+    queryset = Owner.objects.all()
+    serializer_class = OwnerSerializer
