@@ -42,9 +42,9 @@ function load_data {
 
 	echo "==> Loading cars data..."
 	python manage.py loaddata scripts/sample_data/cars.json
-
+	echo
 	echo "==> Done!"
-
+	echo
 	echo "==> Username: admin"
 	echo "==> Password: @dmin1234"
 	echo "==> Login URL: http://$API_HOST:$API_PORT/api/v1/auth/login/"
@@ -89,6 +89,7 @@ function api_init {
 	config_env
 	migrate_db
 	load_data
+	echo "API Server successfully initialised"
 }
 
 function api_deploy {
