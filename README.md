@@ -1,4 +1,4 @@
-<img src="assets/images/logo.png" alt="Django API logo" height="100" >
+<p align="center"><img src="assets/images/logo.png" alt="Django API logo"></p>
 
 # Django REST API Template
 
