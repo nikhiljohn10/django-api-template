@@ -60,6 +60,9 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+ssl/
+00*_initial.py
+*_auto_*_*.py
 
 # Flask stuff:
 instance/
@@ -127,4 +130,6 @@ venv.bak/
 dmypy.json
 
 # Pyre type checker
-.pyre/
+.pyre
+
+# Others

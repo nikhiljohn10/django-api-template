@@ -1,0 +1,201 @@
+#!/bin/bash
+
+function reload {
+	. bin/api
+}
+
+function clean {
+	find ./config -name __pycache__ -exec rm -rf {} +
+	find ./api -name __pycache__ -exec rm -rf {} +
+	find . -name "*.log" -exec rm -rf {} +
+	find ./api/migrations -type f ! -name __init__.py -exec rm -rf {} +
+	rm -rf db.sqlite3
+}
+
+function install_deps {
+	pip install -U pip
+	pip install -r requirements.txt
+}
+
+function load_env {
+	if [[ -f "$1" ]]; then
+		export $(grep -v '^#' $1 | xargs)
+		return 0
+	fi
+	return 1
+}
+
+function config_env {
+	if [[ -f ".env" ]]; then
+		mv -f .env .env.bak
+	fi
+	load_env .env.example
+	envsubst < .env.example > .env
+	echo "DJANGO_SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())')" >> .env
+	load_env .env
+}
+
+function migrate_db {
+	python manage.py makemigrations
+	python manage.py migrate
+}
+
+function load_data {
+	echo "==> Removing all data from the database..."
+	python manage.py flush --noinput
+
+	echo "==> Loading owners data..."
+	python manage.py loaddata bin/sample_data/owners.json
+
+	echo "==> Loading manufacturers data..."
+	python manage.py loaddata bin/sample_data/manufacturers.json
+
+	echo "==> Loading cars data..."
+	python manage.py loaddata bin/sample_data/cars.json
+	echo
+	echo "==> Done!"
+	echo
+	echo "==> Username: admin"
+	echo "==> Password: @dmin1234"
+	echo "==> Login URL: http://$API_HOST:$API_PORT/api/v1/auth/login/"
+	echo
+}
+
+function start_psql {
+	docker run --name postgres_12_4 -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:12.4-alpine
+}
+
+function stop_psql {
+	docker stop postgres_12_4
+}
+
+function kill_psql {
+	stop_psql
+	docker rm postgres_12_4
+}
+
+function wait_for_psql {
+	code=1
+	while [ "$code" != "0" ] && [ should_run ]
+	do
+		echo "Waiting for $i to come up..."
+		nc -z -v -w5 $API_HOST $API_PROD_PORT
+		code=$?
+		echo "Check exited with code $code."
+		if [ "$code" != "0" ]; then
+			sleep 5
+		fi
+	done
+}
+
+function make_cert {
+	mkdir -p ssl
+	if [[ ! -f "$SSL_CERTIFICATE_FILE" ]] || [[ ! -f "$SSL_PRIVATE_KEY_FILE" ]]; then
+	  openssl req -x509 -newkey rsa:4096 -nodes -out $SSL_CERTIFICATE_FILE -keyout $SSL_PRIVATE_KEY_FILE -days 365
+	else
+		echo "Certificates found."
+		echo "Remove certificates and run 'make_cert' to regenerate certificates"
+	fi
+}
+
+function clean_cert {
+	rm -rf ssl
+}
+
+function api_init {
+		clean
+		install_deps
+		config_env
+		migrate_db
+		load_data
+		echo "API Server successfully initialised"
+}
+
+function api_deploy {
+	printf "Is '.env' file configured and verified as per your requirements? [y/N]: "
+	read confirmation
+	if [[ "$confirmation" =~ ^[Yy](es)?$ ]]; then
+		make_cert
+		python manage.py makemigrations --settings=config.settings.production
+		python manage.py migrate --settings=config.settings.production
+		python manage.py check --settings=config.settings.production --deploy
+		if [[ "$1" == "admin" ]]; then
+			python manage.py flush --no-input --settings=config.settings.production
+			python manage.py createsuperuser --settings=config.settings.production --username admin --email admin@localhost
+			if [[ "$?" != "0" ]]; then
+				return 1
+			fi
+		fi
+		gunicorn \
+			-w 3 \
+			-b $API_PROD_HOST:$API_PROD_PORT \
+			--certfile=$SSL_CERTIFICATE_FILE \
+			--keyfile=$SSL_PRIVATE_KEY_FILE \
+			config.wsgi
+	fi
+}
+
+function api_help {
+		echo "Usage: $ api OPTION"
+		echo
+		echo "OPTIONS:"
+		echo
+		echo "    -c | clean    : Clean project's temp files"
+		echo "    -i | install  : Install python dependencies"
+		echo "    -m | migrate  : Migrate database"
+		echo "    -o | demo     : Load dummy data in to database"
+		echo "    -s | setup    : Initialise and configure API server"
+		echo "    -r | run      : Run development API server"
+		echo "    -d | deploy   : Deploy API server using gunicorn"
+		echo "    -h | help     : Display help"
+		echo
+		return 0
+}
+
+function api {
+	if [ $# -eq "0" ]; then
+	  echo "Usage: api COMMAND"
+	  return 2
+	fi
+
+	case $1 in
+		-c | clean )
+			clean
+			return $?
+			;;
+		-m | migrate )
+			migrate_db
+			return $?
+			;;
+		-i | install )
+			install_deps
+			return $?
+			;;
+		-o | demo )
+			load_data
+			return $?
+			;;
+		-s | setup )
+			api_init
+			return $?
+			;;
+		-r | run )
+			python manage.py runserver $API_HOST:$API_PORT
+			return $?
+			;;
+		-d | deploy )
+			api_deploy
+			return $?
+			;;
+		* | -h | help )
+			api_help
+			return $?
+			;;
+	esac
+}
+
+load_env .env
+if [[ "$?" != "0" ]]; then
+	api_init
+fi
+api_help
