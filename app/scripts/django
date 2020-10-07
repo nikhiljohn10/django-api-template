@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export $(cat .env | grep "API_HOST\|API_PORT\|API_PROD_HOST\|API_PROD_PORT\|SSL_CERTIFICATE_FILE\|SSL_PRIVATE_KEY_FILE\|DJANGO_PRODUCTION_POSTGRES" | xargs)
-
 function reload {
 	. scripts/django
 }
@@ -125,4 +123,9 @@ function api_help {
 	echo
 }
 
+if [[ ! -f ".env" ]]; then
+	api_init
+fi
+
+export $(cat .env | grep "API_HOST\|API_PORT\|API_PROD_HOST\|API_PROD_PORT\|SSL_CERTIFICATE_FILE\|SSL_PRIVATE_KEY_FILE\|DJANGO_PRODUCTION_POSTGRES" | xargs)
 api_help
