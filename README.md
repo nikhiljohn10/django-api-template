@@ -19,10 +19,16 @@ sudo apt autoremove
 git clone https://github.com/nikhiljohn10/django-api-template.git
 cd django-api-template/app
 python3 -m venv venv && . venv/bin/activate && . scripts/django
-api_init && api_dev
+
+# To develop
+api_dev
+
+# Edit .env file before deploying
+
+# To deploy
+api_deploy
 ```
 
-**Edit .env file before deploying**
 
 ### Commands
 
