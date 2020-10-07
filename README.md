@@ -5,11 +5,11 @@ Django REST API Template for Github Projects
 ## Using Demo API Server
 
 ```
-# Dependencies for postgresql client
+# Dependencies for postgresql client (Not needed for demo purpose)
 sudo apt update && \
 sudo apt upgrade -y && \
-sudo apt install -y libpq-dev python3-dev && \
-sudo apt autoremove
+sudo apt autoremove && \
+sudo apt install -y libpq-dev python3-dev
 
 # Installing template
 git clone https://github.com/nikhiljohn10/django-api-template.git
@@ -59,9 +59,9 @@ OPTIONS:
 ## Demo
 For demo, use the following:
 
-> Username: admin/alice/bob/lucy
-> Password: @dmin1234
-> Login URL: http://localhost:8000/api/v1/auth/login/
+* Username: admin/alice/bob/lucy
+* Password: @dmin1234
+* Login URL: http://localhost:8000/api/v1/auth/login/
 
 
 ## Contribute
