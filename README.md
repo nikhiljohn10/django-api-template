@@ -1,3 +1,5 @@
+<img src="assets/images/logo.png" alt="Django API logo" height="100" >
+
 # Django REST API Template
 
 Django REST API Template for Github Projects
