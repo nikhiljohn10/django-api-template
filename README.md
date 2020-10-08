@@ -53,10 +53,10 @@ OPTIONS:
 - **kill_psql**   : Remove postgresql container
 
 #### Internal
- - **make_cert**  : Generate self-signed SSL certificate
- - **clean_cert** : Remove SSL certificate
- - **config_env** : Configure the .env file
- - **reload**     : Reload the CLI script
+- **make_cert**  : Generate self-signed SSL certificate
+- **clean_cert** : Remove SSL certificate
+- **config_env** : Configure the .env file
+- **reload**     : Reload the CLI script
 
 ## Demo
 For demo, use the following:
