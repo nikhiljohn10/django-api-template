@@ -1,9 +1,10 @@
 #!/bin/bash
 
-find ./config -name __pycache__ -exec rm -rf {} +
-find ./api -name __pycache__ -exec rm -rf {} +
-find . -name "*.log" -exec rm -rf {} +
-find .. -name ".DS_Store" -exec rm -rf {} +
-find .. -name "Thumb.db" -exec rm -rf {} +
-find ./api/migrations -type f ! -name __init__.py -exec rm -rf {} +
-rm -rf __pycache__ db.sqlite3 ssl .env .env.back venv
+ROOT_DIR=$(pwd)
+APP_DIR=$ROOT_DIR/app
+rm -rf $APP_DIR/db.sqlite3 $APP_DIR/ssl $APP_DIR/.env .$APP_DIR/env.back $APP_DIR/venv
+find $APP_DIR/api/migrations -type f ! -name __init__.py -exec rm -rf {} +
+find $ROOT_DIR -name __pycache__ -exec rm -rf {} +
+find $ROOT_DIR -name "*.log" -exec rm -rf {} +
+find $ROOT_DIR -name ".DS_Store" -exec rm -rf {} +
+find $ROOT_DIR -name "Thumb.db" -exec rm -rf {} +

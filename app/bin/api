@@ -1,66 +1,63 @@
 #!/bin/bash
 
+
+
+ROOT_DIR=$(pwd)
+find_app
+function find_app {
+	local APP=$(cd -P -- $ROOT_DIR/app 2>/dev/null && pwd)
+	if [[ "$APP" != "" ]]; then
+		return 0
+	fi
+	return 1
+}
+if [ "$?" == "1" ]; then
+	echo "App not found in this directory"
+	# exit 1
+fi
+# if [ "$#" -eq "1" ]; then
+# 	if [ -d "$1" ]; then
+# 	  APP_DIR=$1
+# 	fi
+# fi
+
+
+alias manage='python $APP_DIR/manage.py'
+
+#
+#		Reload the api manager
+#
 function reload {
-	. bin/api
+	. $APP_DIR/bin/api
 }
 
-function clean {
-	find ./config -name __pycache__ -exec rm -rf {} +
-	find ./api -name __pycache__ -exec rm -rf {} +
-	find . -name "*.log" -exec rm -rf {} +
-	find ./api/migrations -type f ! -name __init__.py -exec rm -rf {} +
-	rm -rf db.sqlite3
-}
-
-function install_deps {
-	pip install -U pip
-	pip install -r requirements.txt
-}
-
+#
+#		Load variables from .env file in to CLI
+#
 function load_env {
-	if [[ -f "$1" ]]; then
+	if [ -f "$1" ]; then
 		export $(grep -v '^#' $1 | xargs)
 		return 0
 	fi
 	return 1
 }
 
+#
+#		Generate .env file from .env.example
+#
 function config_env {
-	if [[ -f ".env" ]]; then
-		mv -f .env .env.bak
+	if [ -f "$APP_DIR/.env" ]; then
+		mv -f $APP_DIR/.env $APP_DIR/.env.bak
 	fi
-	load_env .env.example
-	envsubst < .env.example > .env
-	echo "DJANGO_SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())')" >> .env
-	load_env .env
+	load_env $APP_DIR/.env.example
+	envsubst < $APP_DIR/.env.example > $APP_DIR/.env
+	echo "DJANGO_SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())')" >> $APP_DIR/.env
+	load_env $APP_DIR/.env
 }
 
-function migrate_db {
-	python manage.py makemigrations
-	python manage.py migrate
-}
-
-function load_data {
-	echo "==> Removing all data from the database..."
-	python manage.py flush --noinput
-
-	echo "==> Loading owners data..."
-	python manage.py loaddata bin/sample_data/owners.json
-
-	echo "==> Loading manufacturers data..."
-	python manage.py loaddata bin/sample_data/manufacturers.json
-
-	echo "==> Loading cars data..."
-	python manage.py loaddata bin/sample_data/cars.json
-	echo
-	echo "==> Done!"
-	echo
-	echo "==> Username: admin"
-	echo "==> Password: @dmin1234"
-	echo "==> Login URL: http://$API_HOST:$API_PORT/api/v1/auth/login/"
-	echo
-}
-
+#
+#		PostgreSQL Docker Container
+#
 function start_psql {
 	docker run --name postgres_12_4 -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:12.4-alpine
 }
@@ -74,34 +71,60 @@ function kill_psql {
 	docker rm postgres_12_4
 }
 
-function wait_for_psql {
-	code=1
-	while [ "$code" != "0" ] && [ should_run ]
-	do
-		echo "Waiting for $i to come up..."
-		nc -z -v -w5 $API_HOST $API_PROD_PORT
-		code=$?
-		echo "Check exited with code $code."
-		if [ "$code" != "0" ]; then
-			sleep 5
-		fi
-	done
+#
+#		COMMAND: api clean
+#
+function clean_project {
+	find $APP_DIR/config -name __pycache__ -exec rm -rf {} +
+	find $APP_DIR/api -name __pycache__ -exec rm -rf {} +
+	find $APP_DIR -name "*.log" -exec rm -rf {} +
+	find $APP_DIR/api/migrations -type f ! -name __init__.py -exec rm -rf {} +
+	rm -rf $APP_DIR/db.sqlite3
 }
 
-function make_cert {
-	mkdir -p ssl
-	if [[ ! -f "$SSL_CERTIFICATE_FILE" ]] || [[ ! -f "$SSL_PRIVATE_KEY_FILE" ]]; then
-	  openssl req -x509 -newkey rsa:4096 -nodes -out $SSL_CERTIFICATE_FILE -keyout $SSL_PRIVATE_KEY_FILE -days 365
-	else
-		echo "Certificates found."
-		echo "Remove certificates and run 'make_cert' to regenerate certificates"
-	fi
+#
+#		COMMAND: api install
+#
+function install_deps {
+	pip install -U pip
+	pip install -r $APP_DIR/requirements.txt
 }
 
-function clean_cert {
-	rm -rf ssl
+#
+#		COMMAND: api migrate
+#
+function migrate_db {
+	manage makemigrations
+	manage migrate
 }
 
+#
+#		COMMAND: api demo
+#
+function load_data {
+	echo "==> Removing all data from the database..."
+	manage flush --noinput
+
+	echo "==> Loading owners data..."
+	manage loaddata $APP_DIR/bin/sample_data/owners.json
+
+	echo "==> Loading manufacturers data..."
+	manage loaddata $APP_DIR/bin/sample_data/manufacturers.json
+
+	echo "==> Loading cars data..."
+	manage loaddata $APP_DIR/bin/sample_data/cars.json
+	echo
+	echo "==> Done!"
+	echo
+	echo "==> Username: admin"
+	echo "==> Password: @dmin1234"
+	echo "==> Login URL: http://$API_HOST:$API_PORT/api/v1/auth/login/"
+	echo
+}
+
+#
+#		COMMAND: api setup
+#
 function api_init {
 		clean
 		install_deps
@@ -111,30 +134,81 @@ function api_init {
 		echo "API Server successfully initialised"
 }
 
-function api_deploy {
-	printf "Is '.env' file configured and verified as per your requirements? [y/N]: "
-	read confirmation
-	if [[ "$confirmation" =~ ^[Yy](es)?$ ]]; then
-		make_cert
-		python manage.py makemigrations --settings=config.settings.production
-		python manage.py migrate --settings=config.settings.production
-		python manage.py check --settings=config.settings.production --deploy
-		if [[ "$1" == "admin" ]]; then
-			python manage.py flush --no-input --settings=config.settings.production
-			python manage.py createsuperuser --settings=config.settings.production --username admin --email admin@localhost
-			if [[ "$?" != "0" ]]; then
-				return 1
-			fi
-		fi
-		gunicorn \
-			-w 3 \
-			-b $API_PROD_HOST:$API_PROD_PORT \
-			--certfile=$SSL_CERTIFICATE_FILE \
-			--keyfile=$SSL_PRIVATE_KEY_FILE \
-			config.wsgi
+#
+#		Generate certificate and private key if none found from .env
+#
+function make_cert {
+	if [ ! -f "$SSL_CERTIFICATE_FILE" ] || [ ! -f "$SSL_PRIVATE_KEY_FILE" ]; then
+		rm -rf $APP_DIR/ssl
+		mkdir -p $APP_DIR/ssl
+		SSL_CERTIFICATE_FILE=$APP_DIR/ssl/app.cert.pem
+		SSL_PRIVATE_KEY_FILE=$APP_DIR/ssl/app.key.pem
+	  openssl req -x509 -newkey rsa:4096 -nodes -out $SSL_CERTIFICATE_FILE -keyout $SSL_PRIVATE_KEY_FILE -days 365
+	else
+		echo "Certificate and Private Key found"
+		echo "Certificate: $SSL_CERTIFICATE_FILE"
+		echo "Private Key: $SSL_PRIVATE_KEY_FILE"
 	fi
 }
 
+#
+#		Wait for postgresql to start
+#
+function wait_for_psql {
+	code=1
+	while [ "$code" != "0" ]
+	do
+		echo "Waiting for postgres server to come up..."
+		nc -z -v -w5 $API_HOST $API_PROD_PORT
+		code=$?
+		if [ "$code" != "0" ]; then
+			sleep 5
+		fi
+	done
+	echo "PostgreSQL server is up"
+}
+
+#
+#		COMMAND: api deploy
+#
+function api_deploy {
+	local confirmation
+	printf "Is '.env' file configured and verified as per your requirements? [y/N]: "
+	read confirmation
+	confirmation=$(echo $confirmation | tr '[:upper:]' '[:lower:]')
+	case $confirmation in
+		y | yes )
+			if [ "$DJANGO_PRODUCTION_POSTGRES" == "true" ]; then
+				wait_for_psql
+			fi
+			make_cert
+			manage makemigrations --settings=config.settings.production
+			manage migrate --settings=config.settings.production
+			manage check --settings=config.settings.production --deploy
+			if [ "$1" == "admin" ]; then
+				manage flush --no-input --settings=config.settings.production
+				manage createsuperuser --settings=config.settings.production --username admin --email admin@localhost
+				if [ "$?" != "0" ]; then
+					return 1
+				fi
+			fi
+			gunicorn \
+				--chdir $APP_DIR \
+				-w 3 \
+				-b $API_PROD_HOST:$API_PROD_PORT \
+				--certfile=$SSL_CERTIFICATE_FILE \
+				--keyfile=$SSL_PRIVATE_KEY_FILE \
+				config.wsgi
+			;;
+		* )
+			echo "Deployment unsuccessful"
+			;;
+	esac
+}
+
+#
+#		COMMAND: api help
+#
 function api_help {
 		echo "Usage: $ api OPTION"
 		echo
@@ -152,15 +226,18 @@ function api_help {
 		return 0
 }
 
+#
+#		COMMAND: api OPTION
+#
 function api {
-	if [ $# -eq "0" ]; then
+	if [ "$#" == "0" ]; then
 	  echo "Usage: api COMMAND"
 	  return 2
 	fi
 
 	case $1 in
 		-c | clean )
-			clean
+			clean_project
 			return $?
 			;;
 		-m | migrate )
@@ -180,22 +257,27 @@ function api {
 			return $?
 			;;
 		-r | run )
-			python manage.py runserver $API_HOST:$API_PORT
+			manage runserver $API_HOST:$API_PORT
 			return $?
 			;;
 		-d | deploy )
 			api_deploy
 			return $?
 			;;
-		* | -h | help )
+		-h | help )
 			api_help
 			return $?
+			;;
+		* )
+			echo "Invalid option."
+			api_help
+			return 1
 			;;
 	esac
 }
 
-load_env .env
-if [[ "$?" != "0" ]]; then
-	api_init
-fi
-api_help
+# load_env $APP_DIR/.env
+# if [ "$?" != "0" ]; then
+# 	api_init
+# fi
+# api_help
