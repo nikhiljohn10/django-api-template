@@ -13,10 +13,13 @@ sudo apt upgrade -y && \
 sudo apt autoremove && \
 sudo apt install -y libpq-dev python3-dev
 
-# Installing template
+# Clone template using one of the three methods below
 git clone https://github.com/nikhiljohn10/django-api-template.git
-cd django-api-template
-python3 -m venv venv && . venv/bin/activate && . app/bin/api
+git clone git@github.com:nikhiljohn10/django-api-template.git
+gh repo clone nikhiljohn10/django-api-template
+
+# Installing template
+cd django-api-template && . app/bin/api
 
 # To develop
 api run
@@ -52,10 +55,6 @@ be executed from the top-level directory (Here it is `django-api-template`).
 - **start_psql**  : Deploy postgresql standalone docker container
 - **stop_psql**   : Stop postgresql container
 - **kill_psql**   : Remove postgresql container
-
-#### Internal
-- **config_env** : Configure the .env file
-- **reload**     : Reload the CLI script
 
 ## Demo
 For demo, use the following:

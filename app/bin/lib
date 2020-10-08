@@ -1,0 +1,257 @@
+#!/bin/bash
+
+
+shopt -s expand_aliases
+alias manage='python $APP_DIR/manage.py'
+
+#
+#		Load variables from .env file in to CLI
+#
+function _load_env {
+	if [ -f "$1" ]; then
+		export $(grep -v '^#' $1 | xargs)
+		return 0
+	fi
+	return 1
+}
+
+#
+#		Generate .env file from .env.example
+#
+function _config_env {
+	if [ -f "$APP_DIR/.env" ]; then
+		mv -f $APP_DIR/.env $APP_DIR/.env.bak
+	fi
+	_load_env $APP_DIR/.env.example
+	envsubst < $APP_DIR/.env.example > $APP_DIR/.env
+	echo "DJANGO_SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())')" >> $APP_DIR/.env
+	_load_env $APP_DIR/.env
+}
+
+#
+#		PostgreSQL Docker Container
+#
+function start_psql {
+	docker run --name postgres_12_4 -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:12.4-alpine
+}
+
+function stop_psql {
+	docker stop postgres_12_4
+}
+
+function kill_psql {
+	stop_psql
+	docker rm postgres_12_4
+}
+
+#
+#		COMMAND: api clean
+#
+function _clean_project {
+	find $APP_DIR/config -name __pycache__ -exec rm -rf {} +
+	find $APP_DIR/api -name __pycache__ -exec rm -rf {} +
+	find $APP_DIR -name "*.log" -exec rm -rf {} +
+	find $APP_DIR/api/migrations -type f ! -name __init__.py -exec rm -rf {} +
+	rm -rf $APP_DIR/db.sqlite3
+}
+
+#
+#		COMMAND: api install
+#
+function _install_deps {
+	pip install -U pip
+	pip install -r $APP_DIR/requirements.txt
+}
+
+#
+#		COMMAND: api migrate
+#
+function _migrate_db {
+	manage makemigrations
+	manage migrate
+}
+
+#
+#		COMMAND: api demo
+#
+function _load_data {
+	echo "==> Removing all data from the database..."
+	manage flush --noinput
+
+	echo "==> Loading owners data..."
+	manage loaddata $APP_DIR/bin/sample_data/owners.json
+
+	echo "==> Loading manufacturers data..."
+	manage loaddata $APP_DIR/bin/sample_data/manufacturers.json
+
+	echo "==> Loading cars data..."
+	manage loaddata $APP_DIR/bin/sample_data/cars.json
+	echo
+	echo "==> Done!"
+	echo
+	echo "==> Username: admin"
+	echo "==> Password: @dmin1234"
+	echo "==> Login URL: http://$API_HOST:$API_PORT/api/v1/auth/login/"
+	echo
+}
+
+#
+#		COMMAND: api setup
+#
+function _api_init {
+	_clean_project
+	_install_deps
+	_config_env
+	_migrate_db
+	_load_data
+	echo "API Server successfully setup"
+}
+
+#
+#		COMMAND: api run
+#
+function _runserver {
+	manage runserver $API_HOST:$API_PORT
+}
+
+#
+#		Generate certificate and private key if none found from .env
+#
+function _make_cert {
+	if [ ! -f "$SSL_CERTIFICATE_FILE" ] || [ ! -f "$SSL_PRIVATE_KEY_FILE" ]; then
+		rm -rf $APP_DIR/ssl
+		mkdir -p $APP_DIR/ssl
+		SSL_CERTIFICATE_FILE=$APP_DIR/ssl/app.cert.pem
+		SSL_PRIVATE_KEY_FILE=$APP_DIR/ssl/app.key.pem
+	  openssl req -x509 -newkey rsa:4096 -nodes -out $SSL_CERTIFICATE_FILE -keyout $SSL_PRIVATE_KEY_FILE -days 365
+	else
+		echo "Certificate and Private Key found"
+		echo "Certificate: $SSL_CERTIFICATE_FILE"
+		echo "Private Key: $SSL_PRIVATE_KEY_FILE"
+	fi
+}
+
+#
+#		Wait for postgresql to start
+#
+function _wait_for_psql {
+	code=1
+	while [ "$code" != "0" ]
+	do
+		echo "Waiting for postgres server to come up..."
+		nc -z -v -w5 $API_HOST $API_PROD_PORT
+		code=$?
+		if [ "$code" != "0" ]; then
+			sleep 5
+		fi
+	done
+	echo "PostgreSQL server is up"
+}
+
+#
+#		COMMAND: api deploy
+#
+function _api_deploy {
+	local confirmation
+	printf "Is '.env' file configured and verified as per your requirements? [y/N]: "
+	read confirmation
+	confirmation=$(echo $confirmation | tr '[:upper:]' '[:lower:]')
+	case $confirmation in
+		y | yes )
+			if [ "$DJANGO_PRODUCTION_POSTGRES" == "true" ]; then
+				_wait_for_psql
+			fi
+			_make_cert
+			manage makemigrations --settings=config.settings.production
+			manage migrate --settings=config.settings.production
+			manage check --settings=config.settings.production --deploy
+			if [ "$1" == "admin" ]; then
+				manage flush --no-input --settings=config.settings.production
+				manage createsuperuser --settings=config.settings.production --username admin --email admin@localhost
+				if [ "$?" != "0" ]; then
+					return 1
+				fi
+			fi
+			gunicorn \
+				--chdir $APP_DIR \
+				-w 3 \
+				-b $API_PROD_HOST:$API_PROD_PORT \
+				--certfile=$SSL_CERTIFICATE_FILE \
+				--keyfile=$SSL_PRIVATE_KEY_FILE \
+				config.wsgi
+			;;
+		* )
+			echo "Deployment unsuccessful"
+			;;
+	esac
+}
+
+#
+#		COMMAND: api help
+#
+function _api_help {
+		echo "Usage: $ api OPTION"
+		echo
+		echo "OPTIONS:"
+		echo
+		echo "    -c | clean    : Clean project's temp files"
+		echo "    -i | install  : Install python dependencies"
+		echo "    -m | migrate  : Migrate database"
+		echo "    -o | demo     : Load dummy data in to database"
+		echo "    -s | setup    : Initialise and configure API server"
+		echo "    -r | run      : Run development API server"
+		echo "    -d | deploy   : Deploy API server using gunicorn"
+		echo "    -h | help     : Display help"
+		echo
+		return 0
+}
+
+#
+#		COMMAND: api OPTION
+#
+function api {
+	if [ "$#" == "0" ]; then
+	  echo "Usage: api COMMAND"
+	  return 2
+	fi
+
+	case $1 in
+		-c | clean )
+			_clean_project
+			return $?
+			;;
+		-m | migrate )
+			_migrate_db
+			return $?
+			;;
+		-i | install )
+			_install_deps
+			return $?
+			;;
+		-o | demo )
+			_load_data
+			return $?
+			;;
+		-s | setup )
+			_api_init
+			return $?
+			;;
+		-r | run )
+			_runserver
+			return $?
+			;;
+		-d | deploy )
+			_api_deploy
+			return $?
+			;;
+		-h | help )
+			_api_help
+			return $?
+			;;
+		* )
+			echo "Invalid option."
+			_api_help
+			return 1
+			;;
+	esac
+}
