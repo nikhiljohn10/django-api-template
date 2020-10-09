@@ -1,9 +1,6 @@
 #!/bin/bash
 
 
-shopt -s expand_aliases
-alias manage='python $APP_DIR/manage.py'
-
 #
 #		Load variables from .env file in to CLI
 #
@@ -59,8 +56,13 @@ function _clean_project {
 #		COMMAND: api install
 #
 function _install_deps {
-	pip install -U pip
-	pip install -r $APP_DIR/requirements.txt
+	ping 1.1.1.1 -c 1 -a -n -q -R -w 4 2>&1 >/dev/null
+	if [ "$?" == "0" ]; then
+		pip install -U pip
+		pip install -r $APP_DIR/requirements.txt
+	else
+		echo "Network is unreachable"
+	fi
 }
 
 #
@@ -99,12 +101,13 @@ function _load_data {
 #		COMMAND: api setup
 #
 function _api_init {
-	_clean_project
-	_install_deps
-	_config_env
-	_migrate_db
-	_load_data
-	echo "API Server successfully setup"
+	_clean_project && \
+	_install_deps && \
+	_config_env && \
+	_migrate_db && \
+	_load_data && \
+	echo "API Server successfully setup" || \
+	echo "API Server setup was unsuccessful"
 }
 
 #

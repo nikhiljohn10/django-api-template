@@ -12,20 +12,16 @@ _venv_init () {
 		read confirmation
 		confirmation=$(echo $confirmation | tr '[:upper:]' '[:lower:]')
 		case $confirmation in
-			y | yes )
-				python3 -m venv $APP_DIR/venv
-				return $?
-				;;
-			* )
-				echo "Python venv not installed"
-				return 1
-				;;
+			y | yes ) python3 -m venv $APP_DIR/venv;;
+			* ) echo "Python venv not installed"; return 1;;
 		esac
 	fi
+	\. $APP_DIR/venv/bin/activate
 }
 
 _build_api_bin () {
-	[ ! -d "$BIN_DIR" ] && mkdir -p $BIN_DIR
+	[ ! -d "$BIN_DIR" ] && \
+		mkdir -p $BIN_DIR
 	cp -f $APP_DIR/bin/lib $BIN_FILE
 	sed -i "3iAPP_DIR=$APP_DIR" $BIN_FILE
 	sed -i "3iROOT_DIR=$ROOT_DIR" $BIN_FILE
@@ -33,23 +29,36 @@ _build_api_bin () {
 }
 
 _api_install () {
-	if [ "$APP_DIR" != "" ]; then
-		if [ ! -f $BIN_FILE ]; then
-			_build_api_bin && echo "API Manager installed for $APP_NAME"
-		else
-			echo "API Manager for $APP_NAME exist"
-		fi
-		return 0
-	else
-		echo "App not found in the currect directory"
-		return 1
-	fi
+	[ ! -f $BIN_FILE ] && \
+		_build_api_bin && \
+		echo "API Manager installed for $APP_NAME" || \
+		echo "API Manager for $APP_NAME exist"
 }
 
+_env_init () {
+	export ROOT_DIR=$ROOT_DIR
+	export APP_DIR=$APP_DIR
+	alias manage='python '$APP_DIR'/manage.py'
+	complete -W 'clean install migrate setup demo run deploy help' api
+}
 
-_venv_init && [ -d "$APP_DIR/venv" ] && \. $APP_DIR/venv/bin/activate && \
-_api_install && \
-export ROOT_DIR=$ROOT_DIR && export APP_DIR=$APP_DIR && \
-\. $BIN_FILE && api setup && api help && \
-complete -W 'clean install migrate setup demo run deploy help' api
-alias esc='deactivate'
+deact () {
+	[ "$_OLD_VIRTUAL_PS1" != "" ] && deactivate && unalias manage
+}
+
+if [ "$APP_DIR" != "" ]; then
+	_venv_init && \
+	_api_install && \
+	_env_init && \
+	echo $BIN_FILE && \
+	\. $BIN_FILE && \
+	_install_deps && \
+	_config_env && \
+	_migrate_db && \
+	_load_data && \
+	echo "API Server successfully setup" && \
+	_api_help || \
+	echo "API Server setup was unsuccessful"
+else
+	echo "App not found in the currect directory"
+fi
