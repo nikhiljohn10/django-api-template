@@ -16,7 +16,9 @@ cd django-api-template && . app/bin/install && api demo
 ```
 
 Demo username: **admin**
+
 Demo password: **@dmin1234**
+
 Demo url: http://localhost:8000/
 
 ## Developing
