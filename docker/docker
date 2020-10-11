@@ -1,0 +1,26 @@
+#!/bin/bash
+
+function setup {
+	echo "Done"
+}
+
+
+function dot {
+	if [ $# -eq "0" ]; then
+	  echo "Usage: dot COMMAND"
+	  return 2
+	fi
+
+	case $1 in
+		-s | setup )
+			setup
+			return $?
+			;;
+		* | -h | help )
+			api_help
+			return $?
+			;;
+	esac
+}
+
+dot $1

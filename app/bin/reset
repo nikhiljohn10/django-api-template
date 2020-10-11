@@ -1,9 +1,0 @@
-#!/bin/bash
-
-find ./config -name __pycache__ -exec rm -rf {} +
-find ./api -name __pycache__ -exec rm -rf {} +
-find . -name "*.log" -exec rm -rf {} +
-find .. -name ".DS_Store" -exec rm -rf {} +
-find .. -name "Thumb.db" -exec rm -rf {} +
-find ./api/migrations -type f ! -name __init__.py -exec rm -rf {} +
-rm -rf __pycache__ db.sqlite3 ssl .env .env.back venv
