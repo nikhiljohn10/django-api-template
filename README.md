@@ -22,6 +22,9 @@ Demo password: **@dmin1234**
 Demo url: http://localhost:8000/
 
 ## Developing
+With 'Use this template' button on Github, you can create a new repo in your profile with this project as template. This method is suggested if you only wish to use the template. 
+
+*Fork the repo for contributing to this repo* 
 
 ```
 # Dependencies for postgresql client (Only needed if it is enabled)
