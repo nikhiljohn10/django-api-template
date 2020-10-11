@@ -1,64 +1,329 @@
 #!/bin/bash
 
-ROOT_DIR=$(pwd)
-APP_NAME=$(basename $ROOT_DIR)
-APP_DIR=$(cd -P -- $ROOT_DIR/app 2>/dev/null && pwd)
-BIN_DIR=$HOME/.django/$APP_NAME/bin
-BIN_FILE=$BIN_DIR/api
 
-_venv_init () {
-	if [ ! -d "$APP_DIR/venv" ]; then
-		printf "Do you wish to enable virtual environment for pip packages?(y/N): "
-		read confirmation
-		confirmation=$(echo $confirmation | tr '[:upper:]' '[:lower:]')
-		case $confirmation in
-			y | yes ) python3 -m venv $APP_DIR/venv;;
-			* ) echo "Python venv not installed"; return 1;;
-		esac
+#
+#		PostgreSQL Docker Container
+#
+function start_psql {
+	docker run --name postgres_12_4 -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:12.4-alpine
+}
+
+function stop_psql {
+	docker stop postgres_12_4
+}
+
+function kill_psql {
+	docker stop postgres_12_4 && docker rm postgres_12_4
+}
+
+#
+#		Load variables from .env file in to CLI
+#
+function __load_env {
+	if [ -f "$1" ]; then
+		export $(grep -v '^#' $1 | xargs)
+		return 0
 	fi
-	\. $APP_DIR/venv/bin/activate
+	return 1
 }
 
-_build_api_bin () {
-	[ ! -d "$BIN_DIR" ] && \
-		mkdir -p $BIN_DIR
-	cp -f $APP_DIR/bin/lib $BIN_FILE
-	sed -i "3iAPP_DIR=$APP_DIR" $BIN_FILE
-	sed -i "3iROOT_DIR=$ROOT_DIR" $BIN_FILE
-	chmod +x $BIN_FILE
+#
+#		Generate .env file from .env.example
+#
+function __config_env {
+	if [ -f "$APP_DIR/.env" ]; then
+		mv -f $APP_DIR/.env $APP_DIR/.env.bak
+	fi
+	__load_env $APP_DIR/.env.example
+	envsubst < $APP_DIR/.env.example > $APP_DIR/.env
+	echo "DJANGO_SECRET_KEY=$(python -c 'from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())')" >> $APP_DIR/.env
+	__load_env $APP_DIR/.env
 }
 
-_api_install () {
-	[ ! -f $BIN_FILE ] && \
-		_build_api_bin && \
-		echo "API Manager installed for $APP_NAME" || \
-		echo "API Manager for $APP_NAME exist"
+#
+#		COMMAND: api clean
+#
+function __api_clean {
+	find $APP_DIR/config -name __pycache__ -exec rm -rf {} +
+	find $APP_DIR/api -name __pycache__ -exec rm -rf {} +
+	find $APP_DIR -name "*.log" -exec rm -rf {} +
+	find $APP_DIR/api/migrations -type f ! -name __init__.py -exec rm -rf {} +
+	manage flush --noinput && \
+	manage makemigrations  && \
+	manage migrate
+	if [ "$?" == "0" ]; then
+		echo "Please enter 'admin' password:"
+		manage createsuperuser --username admin	--email admin@localhost
+	else
+		echo "Failed to reset database"
+	fi
 }
 
-_env_init () {
-	export ROOT_DIR=$ROOT_DIR
-	export APP_DIR=$APP_DIR
-	alias manage='python '$APP_DIR'/manage.py'
-	complete -W 'clean install migrate setup demo run deploy help' api
+
+#
+#		Animate waiting
+#
+__wait_animation () {
+	while :; do
+		printf "\rInstalling dependencies.  "
+		sleep 0.4
+		printf "\rInstalling dependencies.. "
+		sleep 0.4
+		printf "\rInstalling dependencies..."
+		sleep 0.4
+	done
 }
 
-deact () {
-	[ "$_OLD_VIRTUAL_PS1" != "" ] && deactivate && unalias manage
+#
+#		COMMAND: api install
+#
+function __install_deps {
+	(ping 1.1.1.1 -c1 -q > /dev/null 2>&1)
+	if [ "$?" == "0" ]; then
+		{ __WAIT_PID=$( __wait_animation >&3 & echo $! ); } 3>&1
+		pip install -qU pip
+		pip install -qr $APP_DIR/requirements.txt
+		kill -9 $__WAIT_PID && wait $__WAIT_PID 2>/dev/null
+		printf "\rDependencies installed    \n"
+	else
+		echo "Network is unreachable"
+	fi
 }
 
-if [ "$APP_DIR" != "" ]; then
-	_venv_init && \
-	_api_install && \
-	_env_init && \
-	echo $BIN_FILE && \
-	\. $BIN_FILE && \
-	_install_deps && \
-	_config_env && \
-	_migrate_db && \
-	_load_data && \
-	echo "API Server successfully setup" && \
-	_api_help || \
+#
+#		COMMAND: api migrate
+#
+function __migrate_db {
+	manage makemigrations
+	manage migrate
+}
+
+#
+#		COMMAND: api demo
+#
+function __api_demo {
+	echo "==> Removing all data from the database..."
+	manage flush --noinput
+
+	echo "==> Loading owners data..."
+	manage loaddata $ROOT_DIR/assets/sample_data/owners.json
+
+	echo "==> Loading manufacturers data..."
+	manage loaddata $ROOT_DIR/assets/sample_data/manufacturers.json
+
+	echo "==> Loading cars data..."
+	manage loaddata $ROOT_DIR/assets/sample_data/cars.json
+	echo
+	echo "==> Done!"
+	echo
+	echo "==> Username: admin"
+	echo "==> Password: @dmin1234"
+	echo "==> Login URL: http://$API_HOST:$API_PORT/api/v1/auth/login/"
+	echo
+}
+
+#
+#		COMMAND: api setup
+#
+function __api_init {
+	__install_deps && \
+	__config_env && \
+	__migrate_db && \
+	echo "API Server successfully setup" || \
 	echo "API Server setup was unsuccessful"
-else
-	echo "App not found in the currect directory"
-fi
+}
+
+#
+#		COMMAND: api run
+#
+function __api_run {
+	manage runserver $API_HOST:$API_PORT
+}
+
+#
+#		COMMAND: api user [USERNAME] [EMAIL]
+#
+function __api_user {
+	manage createsuperuser --username ${1:-admin} --email ${2:-admin@localhost}
+}
+
+
+#
+#		Generate certificate and private key if none found from .env
+#
+function __make_cert {
+	if [ ! -f "$SSL_CERTIFICATE_FILE" ] || [ ! -f "$SSL_PRIVATE_KEY_FILE" ]; then
+		rm -rf $APP_DIR/ssl
+		mkdir -p $APP_DIR/ssl
+		SSL_CERTIFICATE_FILE=$APP_DIR/ssl/app.cert.pem
+		SSL_PRIVATE_KEY_FILE=$APP_DIR/ssl/app.key.pem
+	  openssl req -x509 -newkey rsa:4096 -nodes -out $SSL_CERTIFICATE_FILE -keyout $SSL_PRIVATE_KEY_FILE -days 365
+	else
+		echo "Certificate and Private Key found"
+		echo "Certificate: $SSL_CERTIFICATE_FILE"
+		echo "Private Key: $SSL_PRIVATE_KEY_FILE"
+	fi
+}
+
+#
+#		Wait for postgresql to start
+#
+function __wait_for_psql {
+	code=1
+	while [ "$code" != "0" ]
+	do
+		echo "Waiting for postgres server to come up..."
+		nc -z -v -w5 $API_HOST $API_PROD_PORT
+		code=$?
+		if [ "$code" != "0" ]; then
+			sleep 5
+		fi
+	done
+	echo "PostgreSQL server is up"
+}
+
+#
+#		COMMAND: api deploy
+#
+function __api_deploy {
+	local confirmation
+	printf "Is '.env' file configured and verified as per your requirements? [y/N]: "
+	read confirmation
+	confirmation=$(echo $confirmation | tr '[:upper:]' '[:lower:]')
+	case $confirmation in
+		y | yes )
+			if [ "$DJANGO_PRODUCTION_POSTGRES" == "true" ]; then
+				__wait_for_psql
+			fi
+			__make_cert
+			manage makemigrations --settings=config.settings.production
+			manage migrate --settings=config.settings.production
+			manage check --settings=config.settings.production --deploy
+			if [ "$1" == "admin" ]; then
+				manage flush --no-input --settings=config.settings.production
+				manage createsuperuser --settings=config.settings.production --username admin --email admin@localhost
+				if [ "$?" != "0" ]; then
+					return 1
+				fi
+			fi
+			gunicorn \
+				--chdir $APP_DIR \
+				-w 3 \
+				-b $API_PROD_HOST:$API_PROD_PORT \
+				--certfile=$SSL_CERTIFICATE_FILE \
+				--keyfile=$SSL_PRIVATE_KEY_FILE \
+				config.wsgi
+			;;
+		* )
+			echo "Deployment unsuccessful"
+			;;
+	esac
+}
+
+#
+#		COMMAND: api help
+#
+function __api_help {
+		echo
+		echo "=================="
+		echo "API Manager v1.2.0"
+		echo "=================="
+		echo
+		echo "Usage: api OPTION"
+		echo
+		echo "OPTIONS:"
+		echo
+		echo "    -c | clean        : Clean up project to start fresh"
+		echo "    -i | install      : Install python dependencies"
+		echo "    -m | migrate      : Migrate database"
+		echo "    -o | demo         : Load demo data in to database"
+		echo "    -s | setup        : Initialise and configure API server"
+		echo "    -u | user [U] [E] : Add superuser with U:username and E:email as arguments"
+		echo "    -r | run          : Run development API server"
+		echo "    -d | deploy       : Deploy API server using gunicorn"
+		echo "    -h | help         : Display help"
+		echo "    -x | exit         : Exit API Manager"
+		echo
+}
+
+#
+#		COMMAND: api exit
+#
+function __api_exit {
+	[ "$_OLD_VIRTUAL_PS1" != "" ] && deactivate
+	complete -r api > /dev/null 2>&1
+	alias | grep manage >/dev/null && unalias manage
+	find $ROOT_DIR \( \
+		-name "__pycache__" -o \
+		-name "*.log" -o \
+		-name ".DS_Store" -o \
+		-name "Thumb.db" \)  -exec rm -rf {} +
+	unset ROOT_DIR
+	unset APP_DIR
+	unset LOCAL_DIR
+	unset BIN_FILE
+	unset APP_NAME
+	unset -f api
+	echo "To re-activate same API Manager, use 'apim' command"
+}
+
+#
+#		COMMAND: api OPTION
+#
+function api {
+	if [ "$#" == "0" ]; then
+		echo "Invalid format"
+		__api_help
+		return 2
+	fi
+	local option=$(echo $1 | tr '[:upper:]' '[:lower:]')
+	case $option in
+		-c | clean )
+			__api_clean
+			return $?
+			;;
+		-m | migrate )
+			__migrate_db
+			return $?
+			;;
+		-i | install )
+			__install_deps
+			return $?
+			;;
+		-o | demo )
+			__api_init && \
+			__api_demo && \
+			__api_run
+			return $?
+			;;
+		-s | setup )
+			__api_init
+			return $?
+			;;
+		-u | user )
+			__api_user admin admin@localhost
+			return $?
+			;;
+		-r | run )
+			__api_run
+			return $?
+			;;
+		-d | deploy )
+			__api_deploy
+			return $?
+			;;
+		-h | help )
+			__api_help
+			return $?
+			;;
+		-x | exit )
+			__api_exit
+			return $?
+			;;
+		* )
+			echo "Invalid option: $option"
+			__api_help
+			return 1
+			;;
+	esac
+}

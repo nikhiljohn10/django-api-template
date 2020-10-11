@@ -1,0 +1,58 @@
+#!/bin/bash
+
+export ROOT_DIR=$(pwd)
+export APP_NAME=$(basename $ROOT_DIR)
+export APP_DIR=$(cd -P -- $ROOT_DIR/app 2>/dev/null && pwd)
+export LOCAL_DIR=$HOME/.django/$APP_NAME
+export BIN_FILE=$LOCAL_DIR/bin/api
+
+__apim_setup () {
+	[ ! -d "$LOCAL_DIR/bin" ] && mkdir -p $LOCAL_DIR/bin
+	cp -f $APP_DIR/bin/api $BIN_FILE
+	sed -i "3iAPP_DIR=$APP_DIR" $BIN_FILE
+	sed -i "3iROOT_DIR=$ROOT_DIR" $BIN_FILE
+	chmod +x $BIN_FILE
+}
+
+__venv_init () {
+	if [ ! -d "$APP_DIR/venv" ]; then
+		printf "Python virtual environment will be installed. Do you wish to proceed?(Y/n): "
+		read confirmation
+		confirmation=$(echo $confirmation | tr '[:upper:]' '[:lower:]')
+		case $confirmation in
+			y | yes | "" ) python3 -m venv $APP_DIR/venv;;
+			* ) echo "Python venv not installed"; return 1;;
+		esac
+	fi
+	\. $APP_DIR/venv/bin/activate
+}
+
+__apim_init () {
+	__venv_init
+	export PS1="\e[0;33m(API)\e[m \e[1;32m$(basename $ROOT_DIR)\e[m$ "
+	alias manage='python '$APP_DIR'/manage.py'
+	alias apim='. '$APP_DIR'/bin/install'
+	alias apim-uninstall='. '$APP_DIR'/bin/uninstall'
+	complete -W 'user clean install migrate setup demo run deploy help exit' api
+	\. $BIN_FILE
+}
+
+__init_apim_setup () {
+	if [ "$1" != "" ]; then
+		if [ ! -f $BIN_FILE ]; then
+			__apim_setup && __apim_init && \
+			echo "API Manager installed for project '$APP_NAME'" && \
+			echo "To uninstall API Manager, use 'apim-uninstall' command" && \
+			echo && \
+			echo "Use 'api help' to access help"
+		else
+			__apim_init && \
+			echo "API Manager for project '$APP_NAME' exist"
+		fi
+	else
+		echo "App not found in the currect directory"
+		return 1
+	fi
+}
+
+__init_apim_setup $APP_DIR  || echo "Error while installing API manager"

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+ROOT_DIR=$(pwd)
+APP_NAME=$(basename $ROOT_DIR)
+LOCAL_DIR=$HOME/.django/$APP_NAME
+
+if [ -d $LOCAL_DIR ]; then
+	alias | grep apim >/dev/null && unalias apim
+	alias | grep apim-uninstall >/dev/null && unalias apim-uninstall
+	rm -rf $LOCAL_DIR
+	echo "Uninstalled API Manager of project '$APP_NAME'"
+	__api_exit >/dev/null 2>&1
+	echo "To install, go to project folder and run '. app/bin/install'"
+fi
