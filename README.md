@@ -22,7 +22,9 @@ Demo password: **@dmin1234**
 Demo url: http://localhost:8000/
 
 ## Developing
-With 'Use this template' button on Github, you can create a new repo in your profile with this project as template. This method is suggested if you only wish to use the template. 
+With 'Use this template' button on Github, you can create a new repo in your 
+profile with this project as template. This method is suggested if you only 
+wish to use the template. 
 
 *Fork the repo for contributing to this repo* 
 
@@ -49,13 +51,16 @@ api run
 ```
 
 ## API Manager Commands
-Use `cd` command to change to project top-level directory before using the following commands.
+Use `cd` command to change to project top-level directory before using the 
+following commands.
 
 * **Install** - `. app/bin/install`
 * **Reactivate** - `apim`
 * **Uninstall** - `apim-uninstall`
 
-**Note:** API Manage only exist inside your currect terminal session. If you close the terminal after installation, you need to run install command again to reactivate the virtual environment.
+**Note:** API Manage only exist inside your currect terminal session. If you 
+close the terminal after installation, you need to run install command again 
+to reactivate the virtual environment.
 
 ## API Manager Usage
 
@@ -77,7 +82,10 @@ OPTIONS:
 
 ```
 
-**Note:** Above commands will only work if API manager is active inside the top-level directory (Here it is `django-api-template`). For example, the prompt will say `(API) django-api-template$` is API manager is active inside your project folder.
+**Note:** Above commands will only work if API manager is active inside the 
+top-level directory (Here it is `django-api-template`). For example, the 
+prompt will say `(API) django-api-template$` is API manager is active inside 
+your project folder.
 
 #### Docker
 - **start_psql**  : Deploy postgresql standalone docker container

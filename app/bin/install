@@ -31,8 +31,10 @@ __apim_init () {
 	__venv_init
 	export PS1="\e[0;33m(API)\e[m \e[1;32m$(basename $ROOT_DIR)\e[m$ "
 	alias manage='python '$APP_DIR'/manage.py'
-	alias apim='. '$APP_DIR'/bin/install'
-	alias apim-uninstall='. '$APP_DIR'/bin/uninstall'
+	alias apim='. app/bin/install 2>/dev/null || echo "App directory not found"'
+	alias apim-uninstall='. app/bin/uninstall 2>/dev/null || echo "App directory not found"'
+	cat $HOME/.bash_aliases | grep apim >/dev/null || echo "alias apim='. app/bin/install 2>/dev/null || echo "'"App directory not found"'"'" >> $HOME/.bash_aliases
+	cat $HOME/.bash_aliases | grep apim-uninstall >/dev/null || echo "alias apim-uninstall='. app/bin/uninstall 2>/dev/null || echo "'"App directory not found"'"'" >> $HOME/.bash_aliases
 	complete -W 'user clean install migrate setup demo run deploy help exit' api
 	\. $BIN_FILE
 }
